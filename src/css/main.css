@@ -37,7 +37,6 @@ html:focus-within {
 
 /* Set core body defaults */
 body {
-  min-height: 100vh;
   text-rendering: optimizeSpeed;
   line-height: 1.5;
 }
@@ -155,11 +154,11 @@ body {
 }
 
 .clr-primary-blood {
-  color: rgb(192, 0, 0);
+  color: #c00000;
 }
 
 .bg-primary-blood {
-  background-color: rgb(192, 0, 0);
+  background-color: #c00000;
 }
 
 .fs-900 {
@@ -187,7 +186,7 @@ body {
 }
 
 .fs-300 {
-  font-size: 1rem;
+  font-size: 0.85rem;
 }
 
 .container {
@@ -205,16 +204,14 @@ body {
 
 #map {
   min-width: 250px;
-  height: 80vh;
-  background-image: url(../assets/icons/map.svg);
-  background-repeat: no-repeat;
+  height: 75vh;
 }
 
 .header {
-  margin-top: 2rem;
-}
-.header h1 {
-  margin-bottom: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-block: 2rem;
 }
 
 .flex {
@@ -227,6 +224,71 @@ body {
 }
 .flex #map {
   flex: 3;
+  position: relative;
+}
+
+.controls {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+.controls .control__btn {
+  background-color: transparent;
+  transition: background-color 300ms ease;
+  height: 43px;
+}
+.controls .control__btn:hover {
+  background-color: rgb(192, 0, 0);
+}
+.controls .control__btn svg {
+  pointer-events: none;
+}
+.controls .control__btn svg:nth-child(1) {
+  display: inline;
+}
+.controls .control__btn svg:nth-child(2) {
+  display: none;
+}
+.controls .control__btn.pause svg:nth-child(1) {
+  display: none;
+}
+.controls .control__btn.pause svg:nth-child(2) {
+  display: inline;
+}
+
+.timeline {
+  margin-bottom: 5rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+}
+.timeline__bar {
+  align-self: flex-end;
+  background-color: rgb(98, 102, 104);
+  cursor: pointer;
+  width: 8px;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+.timeline__bar:hover {
+  background-color: rgb(220, 223, 227);
+}
+.timeline__bar:hover::before {
+  display: block;
+}
+.timeline__bar::before {
+  content: attr(data-text);
+  position: absolute;
+  bottom: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 10px;
+  background: rgb(34, 34, 34);
+  color: #fff;
+  text-align: center;
+  display: none;
 }
 
 /*# sourceMappingURL=main.css.map */

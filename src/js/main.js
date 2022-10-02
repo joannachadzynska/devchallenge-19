@@ -1,58 +1,196 @@
-const currentLang = navigator.language.split("-")[0].toString();
-window.onload = function () {
-    document.documentElement.lang = navigator.language;
-};
-import lang from "../data/names.json" assert { type: "json" };
+import names from "../data/names.json" assert { type: "json" };
+import events from "../data/events.json" assert { type: "json" };
+import { TRANSLATIONS, AFFECTED_TYPES } from "./constants.js";
 
+const stats = [...document.querySelectorAll("[data-type]")];
+const langSwitcher = document.getElementById("lang");
 const map = document.getElementById("map");
+const button = document.getElementById("control__btn");
+const timeline = document.getElementById("timeline");
+let selectedTimeline = 0;
 
-const TRANSLATIONS = {
-    AFFECTED_TYPE: "affected_type",
-    OBJECT_STATUS: "object_status",
-    EVENT: "event",
-    QUALIFICATION: "qualification",
+let isPlayed = false;
+let locale = "en-US";
+let timelineDates = [];
+let interval;
+
+const changeLang = (lang) => {
+    locale = lang;
+    document.documentElement.setAttribute("lang", lang);
+    stats.forEach((element) => translateElement(element));
+    timelineDates = dates2.slice(-100);
+    createTimeline(lang);
+    setAffectedTypesValues(timelineDates[selectedTimeline]);
 };
 
-const AFFECTED_TYPES = [2, 3, 4, 5, 6];
-const OBJECT_STATUS = [
-    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-];
-const EVENT = [
-    5, 6, 7, 8, 9, 10, 11, 12, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-    47,
-];
-const QUALIFICATION = [
-    1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26,
-    27, 29, 30, 32, 33, 34, 35,
-];
+langSwitcher.addEventListener("change", (e) => {
+    changeLang(e.target.value);
+});
 
-const stats = [...document.querySelectorAll("[data-type")];
+addEventListener("DOMContentLoaded", (event) => {
+    changeLang(locale);
+});
 
-class Language {
-    constructor(lang) {
-        var __construct = function () {
-            if (eval("typeof " + lang) == "undefined") {
-                lang = "en";
-            }
-            return;
-        };
-        this.getStr = function (str) {
-            var retStr = eval("eval(lang)." + str);
-            if (typeof retStr != "undefined") {
-                return retStr;
-            } else {
-                return str;
-            }
-        };
-    }
+function translateElement(element) {
+    const key = element.getAttribute("data-type");
+    const translation =
+        names[locale.split("-")[0]][TRANSLATIONS.AFFECTED_TYPE][key];
+    const name = element.querySelector("p");
+    name.innerText = translation;
 }
 
-var translator = new Language(lang[`${currentLang}`]);
+function setAffectedTypesValues(value) {
+    const {
+        affectedTypes,
+        total: { locations },
+    } = value;
 
-stats.forEach((stat) => {
-    const affectedType = stat.getAttribute("data-type");
-    const translation = translator.getStr(TRANSLATIONS.AFFECTED_TYPE)[
-        affectedType
-    ];
-    stat.querySelector("p").textContent = translation;
-});
+    affectedTypes.forEach((type) => {
+        stats
+            .filter(
+                (stat) =>
+                    type.affected_type.id === +stat.getAttribute("data-type")
+            )
+            .forEach((stat) => {
+                const value = stat.querySelector(".stat__card__number");
+                value.innerText = type.affected_number;
+            });
+    });
+    const svg = document.getElementById("mapbox");
+    svg.querySelector("circle").remove();
+    console.log(svg.querySelector("circle"));
+
+    locations.forEach((location) => {
+        const { lon, lat } = location;
+        // targeting the svg itself
+
+        // variable for the namespace
+        const svgns = "http://www.w3.org/2000/svg";
+        const circle = document.createElementNS(svgns, "circle");
+        circle.setAttribute("r", "1.4222");
+        circle.setAttribute("fill", "#c00000");
+        circle.setAttribute("cx", `${lon * 14.7}`);
+        circle.setAttribute("cy", `${lat * 3}`);
+
+        svg.appendChild(circle);
+    });
+}
+
+const groupByKey = (data, key) =>
+    Object.values(
+        data.reduce((res, item) => {
+            const value = item[key];
+            const existing = res[value] || { [key]: value, data: [] };
+            return {
+                ...res,
+                [value]: {
+                    ...existing,
+                    data: [...existing.data, item],
+                },
+            };
+        }, {})
+    );
+
+const dates2 = groupByKey(
+    events.filter((event) => event.affected_type),
+    "from"
+)
+    .sort((a, b) => new Date(a.from) - new Date(b.from))
+    .map((item) => {
+        const affectedTypes = groupByKey(item.data, "affected_type").map(
+            (el) => {
+                const obj = {
+                    affected_type: {
+                        id: +el.affected_type[0],
+                        type: AFFECTED_TYPES[+el.affected_type[0]],
+                    },
+                    affected_number: el.data
+                        .map((num) => +num.affected_number)
+                        .flat()
+                        .reduce((a, b) => a + b, 0),
+                    locations: el.data
+                        .filter((item) => item.lat && item.lon)
+                        .map(({ lat, lon }) => ({
+                            lat,
+                            lon,
+                        })),
+                };
+                return obj;
+            }
+        );
+
+        const total = affectedTypes.reduce(
+            (acc, curr) => ({
+                affected_number: acc.affected_number + curr.affected_number,
+                locations: [...acc.locations, ...curr.locations],
+            }),
+            {
+                affected_number: 0,
+                locations: [],
+            }
+        );
+
+        const allTypes = {
+            from: item.from,
+            affectedTypes,
+            total,
+        };
+
+        return allTypes;
+    });
+
+function setSelectedTimeline(number) {
+    selectedTimeline = number;
+    setAffectedTypesValues(timelineDates[selectedTimeline]);
+}
+
+function createTimeline(lang) {
+    timeline.innerHTML = "";
+    timelineDates.forEach((date, idx) => {
+        let options = {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        };
+        const formattedDate = new Intl.DateTimeFormat(
+            `${lang}`,
+            options
+        ).format(new Date(date.from));
+
+        const div = document.createElement("div");
+        div.id = `${idx}`;
+        div.classList.add("timeline__bar");
+        div.setAttribute("data-text", formattedDate);
+        div.addEventListener("click", () => {
+            setSelectedTimeline(idx);
+            pause();
+        });
+        div.style.height = `${date.total.affected_number}px`;
+        timeline.appendChild(div);
+    });
+}
+
+const togglePlay = (e) => {
+    e.preventDefault();
+    isPlayed = !isPlayed;
+    button.classList.toggle("pause");
+    isPlayed ? play() : pause();
+};
+
+button.addEventListener("click", togglePlay);
+
+function play() {
+    isPlayed = true;
+    interval = setInterval(() => {
+        selectedTimeline++;
+        setSelectedTimeline(selectedTimeline);
+        if (selectedTimeline == timelineDates.length || !isPlayed) {
+            clearInterval(interval);
+        }
+    }, 1000);
+}
+
+function pause() {
+    isPlayed = false;
+    window.clearInterval(interval);
+}
