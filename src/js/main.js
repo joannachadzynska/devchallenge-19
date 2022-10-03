@@ -4,11 +4,11 @@ import { TRANSLATIONS, AFFECTED_TYPES } from "./constants.js";
 
 const stats = [...document.querySelectorAll("[data-type]")];
 const langSwitcher = document.getElementById("lang");
-const map = document.getElementById("map");
 const button = document.getElementById("control__btn");
 const timeline = document.getElementById("timeline");
-let selectedTimeline = 0;
+const svg = document.getElementById("mapbox");
 
+let selectedTimeline = 0;
 let isPlayed = false;
 let locale = "en-US";
 let timelineDates = [];
@@ -56,15 +56,13 @@ function setAffectedTypesValues(value) {
                 value.innerText = type.affected_number;
             });
     });
-    const svg = document.getElementById("mapbox");
-    svg.querySelector("circle").remove();
-    console.log(svg.querySelector("circle"));
+
+    svg.querySelectorAll("circle").forEach((circle) => {
+        circle.parentNode.removeChild(circle);
+    });
 
     locations.forEach((location) => {
         const { lon, lat } = location;
-        // targeting the svg itself
-
-        // variable for the namespace
         const svgns = "http://www.w3.org/2000/svg";
         const circle = document.createElementNS(svgns, "circle");
         circle.setAttribute("r", "1.4222");
